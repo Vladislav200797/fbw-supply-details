@@ -2,13 +2,13 @@ name: Sync FBW Supply Details (WB → Supabase)
 
 on:
   schedule:
-    - cron: "5 4 * * *"   # 07:05 MSK == 04:05 UTC, чуть позже основного списка
+    - cron: "5 4 * * *"   # 07:05 MSK == 04:05 UTC
   workflow_dispatch:
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -24,13 +24,20 @@ jobs:
 
       - name: Run details sync
         env:
+          PYTHONUNBUFFERED: "1"                 # вывод без буфера
           WB_SUPPLIES_TOKEN:    ${{ secrets.WB_SUPPLIES_TOKEN }}
           SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
           SUPABASE_SCHEMA: "public"
           SUPABASE_SUPPLIES_TABLE: "fbw_supplies"
           SUPABASE_DETAILS_TABLE:  "fbw_supply_details"
-          # Дефолтная пауза между запросами (лимит WB — 30/мин)
-          REQUEST_SLEEP_SEC: "2.1"
+          REQUEST_SLEEP_SEC: "2.1"              # 30 req/min → 2.1c
+          # --- Опциональные ускорители ---
+          # Берём только записи, у которых updated_date за последние N дней:
+          DETAILS_UPDATED_DAYS: "7"
+          # Можно ограничить общее число ключей за один запуск (для прогона):
+          MAX_KEYS: ""
+          # Логировать прогресс чаще (по умолчанию каждые 25):
+          LOG_EVERY: "25"
         run: |
-          python fetch_wb_fbw_supply_details.py
+          python -u fetch_wb_fbw_supply_details.py
