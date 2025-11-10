@@ -1,6 +1,8 @@
-name: FBW Supply Details — FULL run (one-time)
+name: FBW Supply Details — Daily (last 7 days)
 
 on:
+  schedule:
+    - cron: "5 4 * * *"   # 07:05 MSK == 04:05 UTC
   workflow_dispatch: {}
 
 concurrency:
@@ -10,7 +12,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
 
@@ -24,7 +26,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run full details sync
+      - name: Run details sync (7 days, UPSERT)
         env:
           PYTHONUNBUFFERED: "1"
           WB_SUPPLIES_TOKEN:    ${{ secrets.WB_SUPPLIES_TOKEN }}
@@ -34,9 +36,9 @@ jobs:
           SUPABASE_SUPPLIES_TABLE: "fbw_supplies"
           SUPABASE_DETAILS_TABLE:  "fbw_supply_details"
           REQUEST_SLEEP_SEC: "2.1"
-          DETAILS_UPDATED_DAYS: ""     # все
+          DETAILS_UPDATED_DAYS: "7"
           MAX_KEYS: ""
           LOG_EVERY: "25"
-          FULL_REFRESH: "true"         # ← полное удаление + вставка
+          FULL_REFRESH: "false"         # ← инкрементальный UPSERT, ничего не удаляем
         run: |
           python -u fetch_wb_fbw_supply_details.py
